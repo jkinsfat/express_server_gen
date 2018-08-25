@@ -3,6 +3,84 @@ if [ -e $1 ]; then
     echo  "Project folder $1 already exists"
     exit 1
 fi
-
+#TODO: add option to install mongoose dependencies and 
 mkdir ./$1
-touch ./$1/app.js
+cd ./$1
+
+touch ./package.json
+echo "{
+  \"name\": \"$1\",
+  \"version\": \"0.0.0\",
+  \"private\": true,
+  \"scripts\": {
+    \"start\": \"node ./bin/www\"
+  },
+  \"dependencies\": {
+  }
+}" >> ./package.json
+npm i -S express body-parser 
+
+touch app.js
+echo "const path = require('path');
+const express = require('express');
+const app = express();
+const bodyParser = require('body-parser');
+const routes = require('./routes/index.js');
+
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, './public/')));
+
+routes(app);
+module.exports = app;" >> app.js
+
+#TODO: take port as optional argument
+mkdir ./bin
+touch ./bin/www
+echo "const http = require('http');
+const app = require('./../app.js');
+const port = 3000;
+
+let server = http.createServer(app);
+server.listen(port);
+server.on('listening', () => console.log('listening on port ' + port))" >> ./bin/www
+
+mkdir ./public
+mkdir ./public/images
+mkdir ./public/scripts
+mkdir ./public/styles
+touch ./public/styles/style.css
+touch ./public/index.html
+echo "<!DOCTYPE html>
+<html>
+<head>
+    <title>$1</title>
+    <link rel='stylesheet' type='text/css' href='styles/style.css'>
+</head>
+<body>
+    <h1>Hello World</h1>
+</body
+</html>" >> ./public/index.html
+echo "h1 {
+        color: red;
+    }" >> ./public/styles/style.css
+
+mkdir ./routes
+touch ./routes/index.js
+echo "const path = require('path');
+
+module.exports = function(app) { 
+    /*app.get('/foo', (req, res) => { 
+        res.redirect(cred.ATB_LINK) 
+    });
+    app.post('/baz', (req, res) => { 
+        res.json({foo: blegh}) 
+    });
+    app.get('/', (req, res, next) {
+        res.render('index', { title: 'Express' });
+    });
+    app.all(\"*\", (req, res, next) => {
+        res.sendFile(path.resolve(\"./../public/index.html\"));
+    }); */
+}" >> ./routes/index.js
+
