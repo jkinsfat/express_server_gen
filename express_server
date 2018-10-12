@@ -3,9 +3,13 @@ if [ -e $1 ]; then
     echo  "Project folder $1 already exists"
     exit 1
 fi
-#TODO: add option to install mongoose dependencies and 
+#TODO: add option to install mongoose dependencies and starter code
 mkdir ./$1
 cd ./$1
+
+touch .gitignore 
+echo ".DS_Store
+node_modules" >> ./.gitignore
 
 touch ./package.json
 echo "{
@@ -18,28 +22,33 @@ echo "{
   \"dependencies\": {
   }
 }" >> ./package.json
-npm i -S express body-parser 
+npm i -S express body-parser bcrypt 
 
 touch app.js
 echo "const path = require('path');
 const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
-const routes = require('./routes/index.js');
+const indexRouter = require('./controllers/index');
+const userRouter = require('./controllers/users')
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, './public/')));
 
-routes(app);
+app.use('/', indexRouter);
+app.use('/users', userRouter);
+
 module.exports = app;" >> app.js
 
-#TODO: take port as optional argument
+if [ -z "$2" ]; then 
+    $2=3000
+fi
 mkdir ./bin
 touch ./bin/www
 echo "const http = require('http');
 const app = require('./../app.js');
-const port = 3000;
+const port = $2;
 
 let server = http.createServer(app);
 server.listen(port);
@@ -65,22 +74,106 @@ echo "h1 {
         color: red;
     }" >> ./public/styles/style.css
 
-mkdir ./routes
-touch ./routes/index.js
+mkdir ./controllers
+touch ./controllers/index.js
 echo "const path = require('path');
+const express = require('express');
+const router = express.Router();
 
-module.exports = function(app) { 
-    /*app.get('/foo', (req, res) => { 
-        res.redirect(cred.ATB_LINK) 
+router.get('/', (req, res, next) {
+        res.render('index', { title: 'Express' });
+});
+router.all(\"*\", (req, res, next) => {
+        res.sendFile(path.resolve(\"./public/index.html\"));
+}); 
+
+module.exports = router;
+" >> ./controllers/index.js
+
+touch ./controllers/users.js
+echo "const express = require('express');
+const router = express.Router();
+
+router.get('/', (req, res) => { 
+        res.redirect();
     });
-    app.post('/baz', (req, res) => { 
+router.post('/', (req, res) => { 
         res.json({foo: blegh}) 
     });
-    app.get('/', (req, res, next) {
-        res.render('index', { title: 'Express' });
-    });
-    app.all(\"*\", (req, res, next) => {
-        res.sendFile(path.resolve(\"./../public/index.html\"));
-    }); */
-}" >> ./routes/index.js
+
+module.exports = router;
+" >> ./controllers/users.js
+
+mkdir ./models
+touch ./models/user.js
+echo "const db = require('mydatabase');
+const bcrypt = require('bcrypt');
+
+exports.create = function(name, email, password, cb) {
+    let user = {
+        name: name,
+        email: email,
+        password: bcrypt.hash(password, 10),
+    }
+
+    db.save(user, cb);
+}
+exports.authenticate = function(email, password) {
+    db.fetch({email: email}), (err, docs) {
+        if (err) {
+            cb(err);
+        }
+        if (docs.length === 0) {
+            cb();
+        }
+
+        let user = docs[0];
+        if (bcrypt.compareSync(password, user.password)) {
+            cb(null, user);
+        }
+    }
+}
+
+exports.get = function(username, cb) {
+    db.fetch({username : username}, function(err, data) {
+        if (err) {
+            //handling
+            cb(err);
+        }
+        cb(err, data);
+    }
+}
+
+exports.getAll = function(cb) {
+    db.fetch({}, cb);
+}" >> user.js
+
+mkdir ./middleware
+mkdir ./middleware/users.js
+echo " const User = require('../models/user');
+
+let loadUserMakingRequest = function(req, res, next) => {
+    if (req.session && req.session.user) {
+        User.get(req.session.user, (err, user) {
+            if (user) {
+                req.user = user;
+            } else {
+                delete req.session.user;
+                delete req.user;
+            }
+        }
+    }
+    next();
+}
+
+module.exports = loadUserMakingRequest;
+
+/* module.exports = function(req, res, next) {
+  if (req.user) {
+    next()
+  } else {
+    res.status(401).end()
+  }
+} */
+" >> ./middleware/user.js
 
