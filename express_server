@@ -3,6 +3,9 @@ if [ -e $1 ]; then
     echo  "Project folder $1 already exists"
     exit 1
 fi
+
+PORT=${2:-"3000"}
+
 #TODO: add option to install mongoose dependencies and starter code
 mkdir ./$1
 cd ./$1
@@ -41,14 +44,11 @@ app.use('/users', userRouter);
 
 module.exports = app;" >> app.js
 
-if [ -z "$2" ]; then 
-    $2=3000
-fi
 mkdir ./bin
 touch ./bin/www
 echo "const http = require('http');
 const app = require('./../app.js');
-const port = $2;
+const port = $PORT;
 
 let server = http.createServer(app);
 server.listen(port);
@@ -80,7 +80,7 @@ echo "const path = require('path');
 const express = require('express');
 const router = express.Router();
 
-router.get('/', (req, res, next) {
+router.get('/', (req, res, next) => {
         res.render('index', { title: 'Express' });
 });
 router.all(\"*\", (req, res, next) => {
@@ -176,4 +176,3 @@ module.exports = loadUserMakingRequest;
   }
 } */
 " >> ./middleware/user.js
-
